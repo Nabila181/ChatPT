@@ -1,6 +1,11 @@
 package ca.qc.bdeb.sim.tp1chattoupt;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -17,10 +22,20 @@ import java.util.Random;
 //     }
 // }
 public class GenerateurTexteMarkov extends GenerateurTexte {
-
     private final Map<String, Map<String, Integer>> transitions = new HashMap<>();
     private final Random random = new Random();
+    private static final String FICHIER_FEEDBACK = "feedback.csv";
 
+    private void enregistrerFeedbackCSV(String mot, String suivant, int delta) {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(FICHIER_FEEDBACK, true))) {
+            bw.write(mot + "," + suivant + "," + delta);
+            bw.newLine();
+        } catch (IOException e) {
+            // On ne casse pas le programme si le feedback ne peut pas être écrit
+            System.err.println("Impossible d'écrire dans feedback.csv : " + e.getMessage());
+        }
+    }
+    
     // @Override
     // public String repondre(String question) throws IOException {
     //     if (transitions.isEmpty()) {
@@ -131,5 +146,55 @@ public class GenerateurTexteMarkov extends GenerateurTexte {
 public Map<String, Map<String, Integer>> getTransitions() {
     return transitions;
 }
+    public void enregistrerFeedback(String question, String reponse, boolean positif) {
+    if (reponse == null || reponse.isBlank()) {
+    return;
+    }
+    String[] mots = reponse.split("\\s+");
+    int delta = positif ? 1 : -1;
+
+    for (int i = 0; i < mots.length - 1; i++) {
+        String courant = mots[i];
+        String suivant = mots[i + 1];
+
+        Map<String, Integer> map = transitions.get(courant);
+        if (map == null) continue;
+
+        int freq = map.getOrDefault(suivant, 0);
+
+        if (positif) {
+            map.put(suivant, freq + 1);   // renforcement
+        } else {
+            map.put(suivant, Math.max(1, freq - 1)); // pénalisation douce
+        }
+        // Persistance dans feedback.csv
+        enregistrerFeedbackCSV(courant, suivant, delta);
+    }
     
+}
+public void appliquerFeedback() {
+    Path p = Path.of(FICHIER_FEEDBACK);
+    if (!Files.exists(p)) return;
+
+    try (BufferedReader br = Files.newBufferedReader(p)) {
+        String ligne;
+        while ((ligne = br.readLine()) != null) {
+            String[] t = ligne.split(",");
+            if (t.length != 3) continue;
+
+            String mot = t[0];
+            String suivant = t[1];
+            int delta = Integer.parseInt(t[2]);
+
+            Map<String, Integer> map = transitions.get(mot);
+            if (map == null) continue;
+
+            int freq = map.getOrDefault(suivant, 1);
+            map.put(suivant, Math.max(1, freq + delta));
+        }
+    } catch (IOException e) {
+        System.err.println("Impossible de lire feedback.csv : " + e.getMessage());
+    }
+}
+
 }

@@ -25,6 +25,9 @@ import javafx.stage.FileChooser;
 
 public class MainJavaFX extends Application {
     private GenerateurTexte generateur;
+    private String derniereQuestion;
+    private String derniereReponse;
+
     @Override
     public void start(Stage stage) {
         generateur = new GenerateurTexteBouleMagique();
@@ -65,6 +68,8 @@ public class MainJavaFX extends Application {
         return scrollPaneConversation;
         }
     private TextField champQuestion;
+    private Button btnLike;
+    private Button btnDislike;
 
     private HBox creerZoneSaisie() {
         champQuestion = new TextField();
@@ -95,6 +100,17 @@ public class MainJavaFX extends Application {
         HBox bas = new HBox(10);
         bas.setStyle("-fx-padding: 10;");
         bas.getChildren().addAll(champQuestion, btnEnvoyer);
+
+        btnLike = new Button("👍");
+        btnDislike = new Button("👎");
+
+        btnLike.setDisable(true);
+        btnDislike.setDisable(true);
+        btnLike.setOnAction(e -> enregistrerFeedback(true));
+        btnDislike.setOnAction(e -> enregistrerFeedback(false));
+
+        bas.getChildren().addAll(btnLike, btnDislike);
+
         return bas;
     }
     private void ajouterMessage(String question, String reponse) {
@@ -128,11 +144,27 @@ public class MainJavaFX extends Application {
             return;
         }
 
-        ajouterMessage(question, reponse);
-        ajouterDerniereQuestion(question);
+        derniereReponse = reponse;
+        derniereQuestion = question;
+        ajouterMessage(derniereQuestion, derniereReponse);
+        ajouterDerniereQuestion(derniereQuestion);
+        btnLike.setDisable(false);
+        btnDislike.setDisable(false);
 
         champQuestion.clear();
         }
+    private void enregistrerFeedback(boolean positif) {
+        // La dernière question est conservée pour pouvoir enregistrer le feedback
+        // associé à la réponse affichée.
+        if (generateur instanceof GenerateurTexteMarkov && derniereReponse != null) {
+        ((GenerateurTexteMarkov) generateur).enregistrerFeedback(derniereQuestion, derniereReponse, positif);
+    }
+
+        // Pour l’instant, on peut juste désactiver les boutons après clic.
+        btnLike.setDisable(true);
+        btnDislike.setDisable(true);
+    }
+
     private VBox vboxDernieresQuestions;
 
     private VBox creerBarreGauche() {
