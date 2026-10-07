@@ -9,8 +9,12 @@ import javafx.scene.Scene;
 
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
@@ -31,14 +35,31 @@ public class MainJavaFX extends Application {
     @Override
     public void start(Stage stage) {
         generateur = new GenerateurTexteBouleMagique();
+        MenuBar menuBar = new MenuBar();
+        Menu menuOutils = new Menu("Outils");
+        MenuItem itemExport = new MenuItem("Exporter modèle");
+        MenuItem itemEntrainement = new MenuItem("Mode entraînement");
+        itemExport.setOnAction(e -> exporterModeleMarkov());
+
+        menuOutils.getItems().addAll(itemExport, itemEntrainement);
+        menuBar.getMenus().add(menuOutils); 
+        itemEntrainement.setOnAction(e -> basculerModeEntrainement());
 
         BorderPane root = new BorderPane();
+        root.setTop(menuBar);
         root.setTop(creerBarreHaut(stage));
         root.setLeft(creerBarreGauche());
         root.setCenter(creerZoneConversation());
         root.setBottom(creerZoneSaisie());
         root.setStyle("-fx-background-color: #f7f3ef;");
 
+        ToggleButton btnEntrainement = ((HBox) root.getBottom()).getChildren().stream()
+            .filter(node -> node instanceof ToggleButton
+                && "Mode entraînement".equals(((ToggleButton) node).getText()))
+            .map(ToggleButton.class::cast)
+            .findFirst()
+            .orElseThrow();
+        btnEntrainement.setOnAction(e -> activerModeEntrainement(btnEntrainement.isSelected()));
 
         Scene scene = new Scene(root, 800, 600);
         stage.setTitle("ChatTouPT");
@@ -52,6 +73,12 @@ public class MainJavaFX extends Application {
     //     conversation.setWrapText(true);
     //     return conversation;
     // }
+    private void activerModeEntrainement(boolean actif) {
+    if (generateur instanceof GenerateurTexteMarkov) {
+        ((GenerateurTexteMarkov) generateur).setModeEntrainement(actif);
+    }
+}
+
     private VBox historiqueMessages;
 
     private ScrollPane scrollPaneConversation;
@@ -110,9 +137,29 @@ public class MainJavaFX extends Application {
         btnDislike.setOnAction(e -> enregistrerFeedback(false));
 
         bas.getChildren().addAll(btnLike, btnDislike);
+        ToggleButton btnEntrainement = new ToggleButton("Mode entraînement");
+        btnEntrainement.setSelected(false);
+        bas.getChildren().add(btnEntrainement);
+        
+        Button btnExporter = new Button("Exporter modèle");
+        btnExporter.setOnAction(e -> exporterModeleMarkov());
+        bas.getChildren().add(btnExporter);
 
         return bas;
     }
+    private void basculerModeEntrainement() {
+        if (generateur instanceof GenerateurTexteMarkov) {
+            GenerateurTexteMarkov g = (GenerateurTexteMarkov) generateur;
+            g.setModeEntrainement(true);
+        }
+    }
+
+    private void exporterModeleMarkov() {
+        if (generateur instanceof GenerateurTexteMarkov) {
+            ((GenerateurTexteMarkov) generateur).exporterModele("modele-markov.csv");
+        }
+    }
+
     private void ajouterMessage(String question, String reponse) {
         Label lblQuestion = new Label("Vous: " + question);
         lblQuestion.setStyle("-fx-font-weight: bold; -fx-text-fill: #3d3d3d;");

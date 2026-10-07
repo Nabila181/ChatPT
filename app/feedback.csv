@@ -12,3 +12,9 @@ beaucoup,manger,1
 manger,des,1
 des,mammifères,1
 mammifères,carnivores.,1
+j'aime,manger,1
+manger,des,1
+des,tacos,1
+j'aime,manger,-1
+manger,des,-1
+des,amis,-1
